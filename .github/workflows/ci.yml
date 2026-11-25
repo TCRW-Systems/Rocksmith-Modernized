@@ -1,0 +1,33 @@
+name: Build and offline checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build x86 runtime and fixtures
+        shell: powershell
+        run: .\startup\build.ps1
+      - name: Python tests
+        run: python -m unittest discover -s tests -v
+      - name: Synthetic native checks
+        shell: powershell
+        run: |
+          Push-Location build/startup
+          try {
+            foreach ($fixture in @('classifier_smoke', 'profile_boot_smoke', 'intro_skip_smoke', 'early_qos_smoke', 'launcher_smoke')) {
+              & ".\$fixture.exe"
+              if ($LASTEXITCODE -ne 0) { throw "Fixture failed: $fixture" }
+            }
+          } finally { Pop-Location }
