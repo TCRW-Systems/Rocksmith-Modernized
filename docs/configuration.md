@@ -16,7 +16,7 @@ Enable both input options only for keyboard/mouse use. The first hides other dev
 
 The profile auto-load adapter has been removed. Profile selection follows the game's normal flow. Legacy `AutoLoadLastProfile` values are ignored, with a diagnostic marker if enabled. The future native startup bypass/main-menu profile option is a separate implementation pass.
 
-`SkipIntro` changes only the native intro controller's completion query in memory. Unready, ready and playing states are preserved; only stopped state is completed, allowing the stock loading callbacks to finish. The initial movie can still appear. The game's normal cleanup leads to the title. It does not modify `cache.psarc`, `static.psarc` or the game executable on disk.
+`SkipIntro` accelerates the intro's own timeline and enables bounded recovery for startup UI requests lost during file indexing. Original playback states and callbacks are preserved; the intro may still flash briefly. With the exact tested RSMods recovery hook already installed, request recovery is left to that mod. Unknown conflicting hooks leave intro acceleration off. The feature does not modify `cache.psarc`, `static.psarc` or the game executable on disk.
 
 `StartupHighQoS` requests an explicit process execution-speed hint; it does not change CPU affinity, priority, a power plan or the registry. The restoration deadline is about 50 seconds after DLL attach. The timer is armed at normal export initialization outside DllMain. If initialization occurs after the deadline, restoration is attempted immediately then. Restoration checks the state, preserves unrelated hint bits and uses bounded timer retries. Failures are recorded in `RSStartup.log`.
 

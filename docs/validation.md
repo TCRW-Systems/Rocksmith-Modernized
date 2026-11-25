@@ -1,16 +1,24 @@
 # Validation status
 
-## Standalone runtime
+## Current startup recovery build
 
-The RSMods runtime dependency and boot-profile adapter have been removed. The current source builds and passes 19 Python tests and eight native fixture modes. The protection tests exercise real Windows exported-native/own WoW64 calls and failed-restore rollback; passthrough checks canonical COM identity.
+The RSMods runtime dependency and boot-profile adapter remain removed. The current source builds and passes 19 Python tests and nine native fixture modes. Added native coverage checks the intro property-accessor ABI, original playback preservation, simultaneous title/overlay requests, request arguments, delay/frame gates, completion/ID cancellation, bounded capture and RX restoration.
 
-A real game launch with both the RSMods DLL and config temporarily absent reached the visible responsive title, normal Ubisoft connection, manual profile picker, main menu and Learn a Song library. Loaded-module inspection confirmed no game-local RSMods runtime. The classifier installed in about 63 ms, all four scoped keyboard/mouse queries were bypassed, and scheduling restoration verified at 50.110 seconds. The title-state observation was 50.975 seconds after process creation / 54.325 seconds after Steam Play. That observation is separate from the later screenshot/Enter check and does not establish a precise interactive latency.
+The final DLL passed a launch with both RSMods files absent, followed by two launches with them restored. Loaded-module inspection confirmed each configuration. All three showed a visible Begin prompt, responded to Enter, connected normally to Ubisoft and reached manual profile selection. Scheduling restoration readback succeeded around 50 seconds after attach. No songs were removed; the installation contains 2,339 DLC archives, which is not a song count.
 
-The original RSMods DLL/config were restored byte-for-byte afterward. The same DLL then passed a coexistence boot with RSMods restored: visible responsive title, online connection and scheduling restoration verified at 50.098 seconds. Title-state observations were 53.166 seconds after process creation / 56.530 seconds after Steam Play. No long-session or crash-rate claim is made.
+| Final-build run | Configuration | Steam Play to title-state marker | Visible Begin observation |
+| --- | --- | --- | --- |
+| 1 | RSMods absent | 23.926 s | Present at the later 33.821 s screenshot |
+| 2 | RSMods restored | 24.907 s | Absent at 28.428 s; present by 33.463 s |
+| 3 | RSMods restored | 25.054 s | Absent at 27.225 s; visible by 29.748 s |
 
-Earlier standalone prototypes are retained in private evidence: ordinary/exported-native protection calls were rejected in the first; the second installed the own native path but premature ready/playing intro completion left the stock loading overlay visible. The current conservative intro hook preserves states 0–2 and completes only stopped state 3. No forced-completion marker occurred in the successful stock-UI run, so a shorter stock intro has not been established. Earlier RSMods-assisted intro timing must not be claimed for this revision.
+The last run's screen observations were scheduled near 24, 27 and 29.5 seconds. The 29.748-second value is an upper bound from the returned screenshot timestamp; it is not an exact first-frame measurement. Enter was checked afterward. These are warm development launches, not a reboot/cold-cache benchmark, median or guarantee that every launch completes in under 30 seconds. Native title-state markers can precede a usable screen and must not substitute for visible verification.
 
-Profile selection is deliberately manual until the later native startup bypass/main-menu selection implementation. RSMods' faster library scanning is not supplied by this standalone mod. The stock library scan remained visibly slow during this smoke test; opening the library does not establish full scan completion, song parity or gameplay stability.
+The startup regression came from leaving the full stock intro in place to avoid a lost-request soft lock. The current implementation accelerates the original animation, preserving its callbacks, and supplies bounded startup movie-request recovery. With RSMods absent, the log verified retries and successful creation of both affected startup movies. If the tested external recovery hook already owns the update site, ours defers; a later external replacement can also own menu updates. Startup smoke tests do not establish every mod/load-order combination.
+
+Failed experiments are retained in private evidence: early ready-state completion and timeline acceleration without recovery left the loading overlay stuck. A title-only retry created the title movie but left the overlay missing; the final capture queue includes both. The prior conservative build passed title/Enter checks but observed about 54-57 seconds from Play to its title marker. These failures are not successful timing samples.
+
+Profile selection is deliberately manual until the later native startup bypass/main-menu option. RSMods' faster song scanning is not supplied here. No long-session, crash-rate, complete library-scan, gameplay or audio/guitar claim is made for this revision.
 
 ## Historical dependent build
 
@@ -31,7 +39,7 @@ The corrected combined DLL passed two consecutive unchanged launches on one deve
 
 These are development observations with a warm machine, not a controlled performance median, cross-machine result, audio/input endorsement or crash-rate claim. Raw captures, dumps, paths, profile names and backup records remain private and are not included in this repository. Earlier prototypes include failures; the CALL/JMP bug described in [architecture.md](architecture.md) was corrected before these two launches.
 
-The prepared public folder also passed a fresh build, all 19 Python tests and all eight native fixture modes. CI deliberately excludes real-game automation and the three desktop-dependent fixture modes. The GitHub-hosted workflow has not yet been run.
+The prepared public folder also passed a fresh build, all 19 Python tests and all nine native fixture modes. CI deliberately excludes real-game automation and the three desktop-dependent fixture modes. The initial GitHub-hosted run on commit `4e59798` compiled successfully but failed the launcher integration test: Windows expanded the runner's short TEMP path while the test compared literal path spellings. The test now compares directory identity with `samefile`; a real 8.3-alias reproducer failed before this change and passed afterward. All 19 Python tests and six synthetic native checks pass locally after the fix. Checkout and Python setup actions were updated to their Node 24 versions. A hosted rerun of these local fixes is still pending a push.
 
 ## Open work
 

@@ -14,7 +14,11 @@ Explicit unloading before timer setup restores the hint. After runtime hooks/tim
 
 ## Intro completion
 
-Only the native intro controller's second `mPlaybackState` getter CALL is redirected. The custom ABI passes the movie in EAX and the engine string in ECX, returning a float in x87 ST0. The adapter calls the original getter, preserves unready/ready/playing states 0, 1 and 2 and unexpected values, and maps only stopped state 3 to finished state 4. No shorter stock intro was established in the standalone test. The game's own controller performs cleanup and transitions to title.
+Only the native intro controller's second `mPlaybackState` getter CALL is redirected. Its custom ABI passes the movie in EAX and the engine string in ECX, returning a float in x87 ST0. The adapter preserves the original playback value. Once the intro has selected a screen and exposed its timeline, it sets that timeline's time scale to 100 using the game's verified property accessor. The original asset and transition callbacks still run; short logo flashes can remain.
+
+A short intro can expose a file-index race: a startup menu requests its Flash movie before the index can answer and never asks again. The independent recovery adapter captures up to 32 native movie requests during the first 30 seconds after hook installation. On the game thread, it retries only matching loader-owned entries whose object is ready but movie is missing, with the same owner and request ID, at least one second and five loader frames between attempts, for at most 30 seconds per request. Completed, replaced and expired requests are discarded. This includes the loading overlay as well as the title.
+
+The adapter uses guarded request/update detours. It defers only when the update detour belongs to the exact tested RSMods image; it does not invoke that image's functions. Unknown hooks or unsupported instructions leave intro acceleration off. No RSMods installation is required for the fallback.
 
 The hook must preserve CALL semantics. An early prototype emitted JMP at this site and crashed; the corrected implementation emits CALL. Its fixture includes an EBP frame and live stack locals so returning to the wrong place cannot accidentally pass as a legal tail call. The failed prototype was rolled back and is not the current code.
 

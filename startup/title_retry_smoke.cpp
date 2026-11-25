@@ -17,7 +17,8 @@ int main() {
     movie[0x40/4]=0x11111111;movie[0x44/4]=0x22222222;
     const char* name="gfxassets/views/titlescreen.gfx";
     movie[0x8c/4]=reinterpret_cast<unsigned>(name);movie[0x9c/4]=reinterpret_cast<unsigned>(name+strlen(name));movie[0xa0/4]=movie[0x9c/4]+1;
-    CHECK(TitleRetry::IsTitle(Address(movie)));CHECK(!TitleRetry::IsTitle(0));
+    TitleRetry::acceptingUntil=GetTickCount64()+30000;
+    TitleRetry::Track(0,1,2);CHECK(!TitleRetry::requests[0].movie);
     BYTE* code=static_cast<BYTE*>(VirtualAlloc(nullptr,4096,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE));CHECK(code);
     // Original six-byte aligned-frame prologue followed by a receiver and RET 8.
     BYTE body[]={0x55,0x8b,0xec,0x83,0xe4,0xf8,0xff,0x75,0x0c,0xff,0x75,0x08,0x50,0xe8,0,0,0,0,0x83,0xc4,0x0c,0x8b,0xe5,0x5d,0xc2,0x08,0};
@@ -25,22 +26,40 @@ int main() {
     DWORD old;CHECK(VirtualProtect(code,4096,PAGE_EXECUTE_READ,&old));
     Call(code);CHECK(sent==1 && object==Address(movie) && arg0==0x11111111 && arg1==0x22222222);
     CHECK(TitleRetry::Patch(TitleRetry::requestPatch,code,reinterpret_cast<void*>(&TitleRetry::RequestHook),TitleRetry::requestRelay));
-    Call(code);CHECK(sent==2 && TitleRetry::pending.movie==Address(movie));
-    CHECK(TitleRetry::pending.id0==arg0 && TitleRetry::pending.id1==arg1);
+    Call(code);CHECK(sent==2 && TitleRetry::requests[0].movie==Address(movie));
+    CHECK(TitleRetry::requests[0].id0==arg0 && TitleRetry::requests[0].id1==arg1);
     loader[0x144/4]=Address(handles);loader[0x148/4]=Address(handles+1);loader[0x10/4]=Address(table);
     table[0]=Address(record);record[3]=Address(state);state[4]=1;state[6]=0x42;state[7]=0x24;
     TitleRetry::Poll(Address(loader));CHECK(sent==2); // No immediate duplicate.
-    TitleRetry::pending.started=GetTickCount64()-2000;TitleRetry::pending.last=GetTickCount64()-1500;
+    TitleRetry::requests[0].started=GetTickCount64()-2000;TitleRetry::requests[0].last=GetTickCount64()-1500;
     TitleRetry::frames=10;
-    TitleRetry::Poll(Address(loader));CHECK(sent==3 && TitleRetry::pending.retries==1);
+    TitleRetry::Poll(Address(loader));CHECK(sent==3 && TitleRetry::requests[0].retries==1);
     TitleRetry::Poll(Address(loader));CHECK(sent==3);
-    movie[0x58/4]=1;TitleRetry::Poll(Address(loader));CHECK(!TitleRetry::pending.movie && sent==3);
+    movie[0x58/4]=1;TitleRetry::Poll(Address(loader));CHECK(!TitleRetry::requests[0].movie && sent==3);
     movie[0x58/4]=0;Call(code);CHECK(sent==4);
-    movie[0x40/4]=3;TitleRetry::Poll(Address(loader));CHECK(!TitleRetry::pending.movie && sent==4);
+    movie[0x40/4]=3;TitleRetry::Poll(Address(loader));CHECK(!TitleRetry::requests[0].movie && sent==4);
+    // The capture window expires; subsequent menus cannot populate the queue.
+    movie[0x40/4]=0x11111111;TitleRetry::acceptingUntil=GetTickCount64()-1;
+    Call(code);CHECK(sent==5 && !TitleRetry::requests[0].movie);
     CHECK(!TitleRetry::Eligible(2000,4,TitleRetry::Pending{}));
     CHECK(!TitleRetry::Eligible(31000,100,TitleRetry::Pending{}));
     CHECK(TitleRetry::Eligible(2000,10,TitleRetry::Pending{}));
+    // Two simultaneous bootstrap movies need independent retry state.
+    unsigned movie2[80]{},owner2[32]{},record2[8]{},state2[16]{};
+    unsigned twoTables[2]{Address(record),Address(record2)},twoHandles[2]{0,1};
+    memcpy(movie2,movie,sizeof(movie));memcpy(owner2,owner,sizeof(owner));
+    owner2[0x50/4]=0x43;movie2[3]=Address(owner2);
+    record2[3]=Address(state2);state2[4]=1;state2[6]=0x43;state2[7]=0x24;
+    loader[0x10/4]=Address(twoTables);loader[0x144/4]=Address(twoHandles);loader[0x148/4]=Address(twoHandles+2);
+    TitleRetry::acceptingUntil=GetTickCount64()+30000;
+    TitleRetry::Track(Address(movie),arg0,arg1);TitleRetry::Track(Address(movie2),arg0,arg1);
+    CHECK(TitleRetry::requests[0].movie==Address(movie) && TitleRetry::requests[1].movie==Address(movie2));
+    for(auto& p:TitleRetry::requests)if(p.movie){p.started=GetTickCount64()-2000;p.last=GetTickCount64()-1500;p.frame=0;}
+    TitleRetry::Poll(Address(loader));CHECK(sent==7); // Both the title and an overlay retry.
+    movie[0x58/4]=1;movie2[0x58/4]=1;
+    TitleRetry::Poll(Address(loader));CHECK(!TitleRetry::requests[0].movie && !TitleRetry::requests[1].movie);
+    CHECK(!TitleRetry::KnownRecoveryOwner(code)); // Our fixture's detour is not an approved external owner.
     MEMORY_BASIC_INFORMATION info{};CHECK(VirtualQuery(code,&info,sizeof(info)));CHECK(info.Protect==PAGE_EXECUTE_READ);
-    puts("PASS: title request hook ABI, title-only capture, retry delay/frame gates, native dispatch, completion/id cancellation and RX restoration");
+    puts("PASS: title request hook ABI, bounded startup capture, retry delay/frame gates, native dispatch, completion/id cancellation and RX restoration");
     return 0;
 }

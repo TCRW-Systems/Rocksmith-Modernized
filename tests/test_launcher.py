@@ -25,7 +25,9 @@ class LauncherIntegrationTests(unittest.TestCase):
             self.assertEqual(result.returncode, 37)
             self.assertGreaterEqual(time.monotonic() - start, .3)
             lines = output.read_text(encoding='utf-8-sig').splitlines()
-            self.assertEqual(Path(lines[0]), root)
+            # Windows/.NET may expand an 8.3 TEMP alias to its long spelling.
+            # Verify the actual working directory, not its path representation.
+            self.assertTrue(Path(lines[0]).samefile(root))
             self.assertEqual(lines[1], environment['RSM_FIXTURE_TOKEN'])
             self.assertEqual([base64.b64decode(line).decode('utf-8') for line in lines[2:]], args)
 

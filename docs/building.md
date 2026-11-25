@@ -17,6 +17,7 @@ try {
     .\classifier_smoke.exe
     .\memory_protection_smoke.exe
     .\intro_skip_smoke.exe
+    .\title_retry_smoke.exe
     .\early_qos_smoke.exe
     .\launcher_smoke.exe
     .\Rocksmith2014.exe
@@ -25,7 +26,7 @@ try {
 } finally { Pop-Location }
 ```
 
-Check every executable's exit code; 0 means success. The included CI script does so explicitly. The last three modes exercise actual Windows DirectInput or process scheduling and may need a normal interactive Windows desktop. The GitHub workflow runs the first five synthetic fixture executables and the Python suite; it does not treat hosted CI as interactive game validation.
+Check every executable's exit code; 0 means success. The included CI script does so explicitly. The last three modes exercise actual Windows DirectInput or process scheduling and may need a normal interactive Windows desktop. The GitHub workflow runs the first six synthetic fixture executables and the Python suite; it does not treat hosted CI as interactive game validation.
 
 The harness named `Rocksmith2014.exe` is synthetic. Never copy it into your game installation or distribute it as the game. It creates a temporary test INI beside itself and refuses an existing INI. Run tests before creating a deployable config in that build directory.
 
