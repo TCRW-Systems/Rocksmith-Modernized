@@ -1,16 +1,15 @@
 # Rocksmith Modernized
 
-Experimental startup improvements for the Windows Steam edition of Rocksmith 2014 Remastered. The installed mod consists of **`dinput8.dll` and `RSStartup.ini`**. It works alongside an existing compatible RSMods installation; RS ASIO remains separate if you use it.
+Experimental startup improvements for the Windows Steam edition of Rocksmith 2014 Remastered. The installed mod consists of **`dinput8.dll` and `RSStartup.ini`**. RSMods is optional; RS ASIO remains separate if you use it. The standalone runtime uses Windows APIs directly.
 
-The project is in early development. It has passed targeted native tests and two consecutive boots of the corrected combined build on one setup. It has not passed the release stability gates or the ten-second startup target. The latest development observation was approximately 29.4 seconds from Steam Play to the title state. Library-loading frame-rate problems remain open.
+The project is in early development. The standalone code passes offline checks; real-game validation is documented in [validation status](docs/validation.md). Earlier dependency-based builds passed two consecutive boots on one setup. It has not passed the release stability gates or the ten-second startup target. The earlier RSMods-dependent build observed approximately 29.4 seconds from Steam Play to the title state; the current standalone test observed approximately 54.3 seconds. Its conservative intro path needs further optimization. Library-loading frame-rate problems remain open.
 
 ## Features
 
 | Option | Behavior |
 | --- | --- |
-| `SkipIntro` | Completes the initialized native intro through the game's own transition, without editing game archives. |
+| `SkipIntro` | Experimental stopped-state intro completion without archive edits. Faster timing on the stock UI is not yet established. |
 | `StartupHighQoS` | Requests a temporary process scheduling hint near startup, then attempts and verifies restoration around 50 seconds. |
-| `AutoLoadLastProfile` | Confirms the game's remembered profile on initial boot. The picker can appear briefly; later profile selection stays manual. |
 | `SkipGamepadEnumeration` | Limits the wrapped DirectInput enumeration to keyboard and mouse. Opt in only if you do not need a gamepad. |
 | `SkipKnownKeyboardMouseXInputChecks` | Avoids redundant XInput classification for the keyboard/mouse currently being enumerated; requires the preceding option. |
 
@@ -18,9 +17,9 @@ Ubisoft online features remain enabled. The mod does not automate sign-in, edit 
 
 ## Compatibility
 
-This is an x86 mod. The native input/profile/intro hooks currently require one exact game executable and RSMods binary; see [compatibility](docs/compatibility.md) for hashes and the pinned upstream revision. Other releases, including other RSMods builds with the same displayed version, are not qualified. Unrecognized native hook targets are left unpatched. Controller enumeration and the Windows scheduling option have their own gates; an unsupported native hook does not disable every other selected feature.
+This is an x86 mod. The native classifier and intro hooks currently require one exact game executable; see [compatibility](docs/compatibility.md) for its hash. No RSMods binary, configuration or internal function is required. Unrecognized native hook targets are left unpatched. Controller enumeration and the Windows scheduling option have their own gates.
 
-The game, DLC, RSMods, RS ASIO and their assets are not included. Install those separately. No Steam launch wrapper or modified game archive is required for the current DLL implementation.
+The game, DLC and other mods are not included. A separately obtained game installation is required; other mods remain optional. No Steam launch wrapper or modified game archive is required for the current DLL implementation.
 
 ## Build and test
 
@@ -35,9 +34,11 @@ python -m unittest discover -s tests -v
 
 The build discovers the compiler and SDK; overrides are available. It writes to `build/startup` and does not install into or start the real game. The test executable named `Rocksmith2014.exe` in that directory is a synthetic harness, not the game. See [building and testing](docs/building.md) for native checks and CI details.
 
+Profile selection currently uses the normal game flow. The old RSMods-backed auto-load adapter has been removed. A deeper startup picker bypass with a main-menu profile-selection option is planned as separate work. Legacy `AutoLoadLastProfile` settings are ignored and logged.
+
 ## Configure and install
 
-Read the compatibility requirements first. Close Rocksmith. Copy `startup/RSStartup.example.ini` to a working file and enable the options you want; the example defaults every feature off. `startup/RSStartup.prototype.ini` instead enables intro skipping, scheduling and profile auto-load while preserving gamepads.
+Read the compatibility requirements first. Close Rocksmith. Copy `startup/RSStartup.example.ini` to a working file and enable the options you want; the example defaults every feature off. `startup/RSStartup.prototype.ini` instead enables intro skipping and scheduling while preserving gamepads.
 
 Use an explicit installation path and a new backup-record directory outside the game:
 

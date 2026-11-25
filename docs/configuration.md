@@ -6,7 +6,6 @@
 [Startup]
 SkipGamepadEnumeration=0
 SkipKnownKeyboardMouseXInputChecks=0
-AutoLoadLastProfile=1
 SkipIntro=1
 StartupHighQoS=1
 ```
@@ -15,9 +14,9 @@ This is the generic prototype preset. `startup/RSStartup.example.ini` instead de
 
 Enable both input options only for keyboard/mouse use. The first hides other devices from the wrapped DirectInput enumeration callbacks, and the second shortcuts classification only for the exact known keyboard/mouse product GUID. It does not uninstall devices or change their system settings. Leave both off for gamepad support.
 
-`AutoLoadLastProfile` is boot-only. It uses the game's remembered selection after reaching the initial picker. Creation-only, ambiguous, unready or structurally invalid profile rows stay manual. It has bounded retries and times out. It stops after the initial selection, so returning through Escape → Yes, quit → title → Enter leaves profile selection manual. The current implementation does not remove the picker or store an explicit profile ID. Required RSMods settings are documented in [compatibility.md](compatibility.md).
+The profile auto-load adapter has been removed. Profile selection follows the game's normal flow. Legacy `AutoLoadLastProfile` values are ignored, with a diagnostic marker if enabled. The future native startup bypass/main-menu profile option is a separate implementation pass.
 
-`SkipIntro` changes only the native intro controller's completion query in memory. Missing/unready state is preserved. The game's normal cleanup leads to the title. It does not modify `cache.psarc`, `static.psarc` or the game executable on disk.
+`SkipIntro` changes only the native intro controller's completion query in memory. Unready, ready and playing states are preserved; only stopped state is completed, allowing the stock loading callbacks to finish. The initial movie can still appear. The game's normal cleanup leads to the title. It does not modify `cache.psarc`, `static.psarc` or the game executable on disk.
 
 `StartupHighQoS` requests an explicit process execution-speed hint; it does not change CPU affinity, priority, a power plan or the registry. The restoration deadline is about 50 seconds after DLL attach. The timer is armed at normal export initialization outside DllMain. If initialization occurs after the deadline, restoration is attempted immediately then. Restoration checks the state, preserves unrelated hint bits and uses bounded timer retries. Failures are recorded in `RSStartup.log`.
 

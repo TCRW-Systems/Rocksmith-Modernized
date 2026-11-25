@@ -1,5 +1,19 @@
 # Validation status
 
+## Standalone runtime
+
+The RSMods runtime dependency and boot-profile adapter have been removed. The current source builds and passes 19 Python tests and eight native fixture modes. The protection tests exercise real Windows exported-native/own WoW64 calls and failed-restore rollback; passthrough checks canonical COM identity.
+
+A real game launch with both the RSMods DLL and config temporarily absent reached the visible responsive title, normal Ubisoft connection, manual profile picker, main menu and Learn a Song library. Loaded-module inspection confirmed no game-local RSMods runtime. The classifier installed in about 63 ms, all four scoped keyboard/mouse queries were bypassed, and scheduling restoration verified at 50.110 seconds. The title-state observation was 50.975 seconds after process creation / 54.325 seconds after Steam Play. That observation is separate from the later screenshot/Enter check and does not establish a precise interactive latency.
+
+The original RSMods DLL/config were restored byte-for-byte afterward. The same DLL then passed a coexistence boot with RSMods restored: visible responsive title, online connection and scheduling restoration verified at 50.098 seconds. Title-state observations were 53.166 seconds after process creation / 56.530 seconds after Steam Play. No long-session or crash-rate claim is made.
+
+Earlier standalone prototypes are retained in private evidence: ordinary/exported-native protection calls were rejected in the first; the second installed the own native path but premature ready/playing intro completion left the stock loading overlay visible. The current conservative intro hook preserves states 0–2 and completes only stopped state 3. No forced-completion marker occurred in the successful stock-UI run, so a shorter stock intro has not been established. Earlier RSMods-assisted intro timing must not be claimed for this revision.
+
+Profile selection is deliberately manual until the later native startup bypass/main-menu selection implementation. RSMods' faster library scanning is not supplied by this standalone mod. The stock library scan remained visibly slow during this smoke test; opening the library does not establish full scan completion, song parity or gameplay stability.
+
+## Historical dependent build
+
 The corrected combined DLL passed two consecutive unchanged launches on one development setup with RSMods, RS ASIO and a large library of 2,339 DLC archives. An archive count is not a song count.
 
 | Check | Observation |

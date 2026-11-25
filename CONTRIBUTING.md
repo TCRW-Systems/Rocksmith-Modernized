@@ -6,6 +6,6 @@ Do not add personal profile strings, fixed Steam library paths, account identifi
 
 For a behavior change, explain the trigger, resulting behavior, compatibility gates and relevant validation. Use native fixtures for stack/register/return-value assumptions. A trivial CALL/RET fixture can miss stack corruption; include realistic live frames where the ABI requires them. Offline checks do not replace gameplay validation.
 
-Report crashes with the game and RSMods file hashes, selected startup options, the action that triggered the crash, and whether it reproduces with each option disabled. Include a short redacted log excerpt when useful. Do not attach complete diagnostic folders, profiles, game archives or memory dumps without reviewing them. The diagnostic tool can copy configurations and dumps into its output.
+Report crashes with the game hash and any optional installed mod versions, selected startup options, the action that triggered the crash, and whether it reproduces with each option disabled. Include a short redacted log excerpt when useful. Do not attach complete diagnostic folders, profiles, game archives or memory dumps without reviewing them. The diagnostic tool can copy configurations and dumps into its output.
 
 Do not contribute proprietary game assets, upstream binaries, credentials or private captures. Keep the public source folder separate from local evidence. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the existing external dependency boundary.

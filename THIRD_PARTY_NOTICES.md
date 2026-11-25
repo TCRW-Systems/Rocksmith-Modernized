@@ -6,11 +6,11 @@ Rocksmith and associated names belong to their respective owners. A separately o
 
 ## RSMods
 
-[RSMods](https://github.com/Lovrom8/RSMods) is a separate runtime dependency for the native classifier, intro and profile adapters. The currently pinned revision is [`bc2856bf99f0738cac8923cdf7b6e5aad2d55f4d`](https://github.com/Lovrom8/RSMods/tree/bc2856bf99f0738cac8923cdf7b6e5aad2d55f4d).
+[RSMods](https://github.com/Lovrom8/RSMods) is an optional, separately installed mod. Earlier prototypes called its loaded memory-protection helper and profile tick. Those runtime dependencies have been removed; the current code uses its own Windows API wrapper and leaves profile selection manual.
 
-The adapters call the existing loaded memory-protection helper and profile tick through a verified build-specific ABI. The project does not bundle RSMods source, binaries, symbols, GUI resources, Fast Load assets or its third-party libraries. RSMods' existing song-scan improvements remain part of RSMods. Relevant upstream implementation: [MemUtil.cpp](https://github.com/Lovrom8/RSMods/blob/bc2856bf99f0738cac8923cdf7b6e5aad2d55f4d/DLL/MemUtil.cpp).
+The project does not bundle RSMods source, binaries, symbols, GUI resources, Fast Load assets or third-party libraries. RSMods' song-scan improvements remain part of RSMods. Upstream implementation studied during the earlier work: [MemUtil.cpp at bc2856bf99f0738cac8923cdf7b6e5aad2d55f4d](https://github.com/Lovrom8/RSMods/blob/bc2856bf99f0738cac8923cdf7b6e5aad2d55f4d/DLL/MemUtil.cpp). Diagnostic offsets were checked against that project's public descriptions and the pinned local game.
 
-Do not infer permission to redistribute an upstream project from its public availability. Obtain RSMods from its maintainers and review its terms separately before proposing bundled distributions. This repository's MIT license does not grant rights to RSMods or game content.
+Obtain optional mods from their maintainers. This repository's MIT license does not grant rights to their content or to the game.
 
 ## RS ASIO
 
@@ -18,4 +18,4 @@ Do not infer permission to redistribute an upstream project from its public avai
 
 ## Microsoft tools and APIs
 
-The build uses a locally installed Windows SDK, Visual C++ toolchain and .NET Framework compiler. Those tools are not vendored. Runtime forwarding uses the operating system's own DirectInput library. The DLL is built with the static C++ runtime. Toolchain and runtime terms remain separate from the project source license.
+The build uses a locally installed Windows SDK, Visual C++ toolchain and .NET Framework compiler. Those tools are not vendored. Runtime forwarding uses the operating system's own DirectInput library. The protection adapter reads a service identifier from the user's Windows ntdll at runtime; Windows library implementation bytes are not bundled. The DLL is built with the static C++ runtime. Toolchain and runtime terms remain separate from the project source license.

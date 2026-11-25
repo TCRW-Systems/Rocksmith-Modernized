@@ -26,7 +26,7 @@ jobs:
         run: |
           Push-Location build/startup
           try {
-            foreach ($fixture in @('classifier_smoke', 'profile_boot_smoke', 'intro_skip_smoke', 'early_qos_smoke', 'launcher_smoke')) {
+            foreach ($fixture in @('classifier_smoke', 'memory_protection_smoke', 'intro_skip_smoke', 'early_qos_smoke', 'launcher_smoke')) {
               & ".\$fixture.exe"
               if ($LASTEXITCODE -ne 0) { throw "Fixture failed: $fixture" }
             }

@@ -18,7 +18,7 @@ class StartupInstallTests(unittest.TestCase):
         self.record = self.root / 'record'
         self.dll, self.ini = self.root / 'proxy.dll', self.root / 'config.ini'
         self.dll.write_bytes(b'new proxy')
-        self.ini.write_bytes(b'[Startup]\r\nAutoLoadLastProfile=1\r\n')
+        self.ini.write_bytes(b'[Startup]\r\nSkipIntro=1\r\n')
         self.old = {'dinput8.dll': b'previous proxy', 'RSStartup.ini': b'previous config'}
         self.closed = patch.object(installer, 'check_closed')
         self.closed.start()

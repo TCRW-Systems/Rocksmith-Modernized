@@ -15,7 +15,7 @@ Native checks, from the repository root:
 Push-Location build/startup
 try {
     .\classifier_smoke.exe
-    .\profile_boot_smoke.exe
+    .\memory_protection_smoke.exe
     .\intro_skip_smoke.exe
     .\early_qos_smoke.exe
     .\launcher_smoke.exe

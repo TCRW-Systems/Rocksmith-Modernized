@@ -35,7 +35,7 @@ try {
         & $compiler /nologo /LD /O2 /MT /EHsc /W4 /std:c++17 @includes "$PSScriptRoot\dinput8.cpp" /link "/DEF:$PSScriptRoot\dinput8.def" /OUT:dinput8.dll @libraries dxguid.lib user32.lib bcrypt.lib
         if($LASTEXITCODE -ne 0) {throw 'Startup proxy compilation failed'}
     }
-    foreach($fixture in @(@('smoke','Rocksmith2014','dxguid.lib'),@('classifier_smoke','classifier_smoke','bcrypt.lib'),@('profile_boot_smoke','profile_boot_smoke','bcrypt.lib'),@('intro_skip_smoke','intro_skip_smoke','bcrypt.lib'),@('early_qos_smoke','early_qos_smoke','kernel32.lib'))) {
+    foreach($fixture in @(@('smoke','Rocksmith2014','dxguid.lib'),@('classifier_smoke','classifier_smoke','bcrypt.lib'),@('memory_protection_smoke','memory_protection_smoke','kernel32.lib'),@('intro_skip_smoke','intro_skip_smoke','bcrypt.lib'),@('title_retry_smoke','title_retry_smoke','bcrypt.lib'),@('early_qos_smoke','early_qos_smoke','kernel32.lib'))) {
         & $compiler /nologo /O2 /MT /EHsc /W4 /std:c++17 @includes "$PSScriptRoot\$($fixture[0]).cpp" /link "/OUT:$($fixture[1]).exe" @libraries $fixture[2]
         if($LASTEXITCODE -ne 0) {throw "Fixture compilation failed: $($fixture[0])"}
     }

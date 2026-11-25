@@ -6,18 +6,17 @@
 #include <cstdio>
 #include <cwchar>
 #include "input_classifier.hpp"
-#include "profile_boot.hpp"
 #include "early_qos.hpp"
 #include "intro_skip.hpp"
+#include "title_retry.hpp"
 
-// Process-local input/profile/intro adapters. Hooks initialize at normal export
+// Process-local input/intro adapters. Hooks initialize at normal export
 // calls. Early QoS uses bounded Kernel32-only attach work; its restoration timer
 // is armed outside DllMain. No executable or asset files are patched on disk.
 static HMODULE systemDll;
 static INIT_ONCE initOnce = INIT_ONCE_STATIC_INIT;
 static bool skipGamepads;
 static bool skipKnownDeviceQueries;
-static bool autoLastProfile;
 static bool skipIntro;
 static wchar_t startupConfig[MAX_PATH];
 static wchar_t logPath[MAX_PATH];
@@ -57,7 +56,6 @@ static BOOL CALLBACK Initialize(PINIT_ONCE, PVOID, PVOID*) {
     wcscpy_s(startupConfig,config);
     skipGamepads=target && GetPrivateProfileIntW(L"Startup",L"SkipGamepadEnumeration",0,config)!=0;
     skipKnownDeviceQueries=skipGamepads && GetPrivateProfileIntW(L"Startup",L"SkipKnownKeyboardMouseXInputChecks",0,config)!=0;
-    autoLastProfile=target && GetPrivateProfileIntW(L"Startup",L"AutoLoadLastProfile",0,config)!=0;
     skipIntro=target && GetPrivateProfileIntW(L"Startup",L"SkipIntro",0,config)!=0;
     if(target) {
         FILETIME created, exited, kernel, user;
@@ -67,6 +65,7 @@ static BOOL CALLBACK Initialize(PINIT_ONCE, PVOID, PVOID*) {
             if(b.QuadPart>=a.QuadPart)Log("proxy_process_attach_age_ms",static_cast<unsigned>((b.QuadPart-a.QuadPart)/10000));
         }
         Log("proxy_initialized_skip_gamepads",skipGamepads);
+        if(GetPrivateProfileIntW(L"Startup",L"AutoLoadLastProfile",0,config))Log("profile_auto_load_deferred",0);
         EarlyQos::Initialize(Log);
     }
     return TRUE;
@@ -78,34 +77,36 @@ static FARPROC Resolve(const char* name) {
 }
 
 static void TryFeatures() {
-    static unsigned attempts=0;
-    if((!skipKnownDeviceQueries || InputClassifier::original) && (!autoLastProfile || ProfileBoot::installed) && (!skipIntro || IntroSkip::installed))return;
-    if(attempts>=4)return;
-    // Retry only a host-not-loaded rejection, before a game callback can use it.
-    if(attempts && !(InputClassifier::lastGuardError==204 && InputClassifier::lastRsmodsGuard==2))return;
-    ++attempts;
+    static bool attempted=false;
+    if(attempted || (!skipKnownDeviceQueries && !skipIntro))return;
+    attempted=true;
     ULONGLONG before=GetTickCount64();
     bool ready=InputClassifier::PrepareHost();
     if(!ready) {Log("startup_host_guard_rejected",InputClassifier::lastGuardError);return;}
+    // This exact game rejects API-wrapper protection calls and stalls in them.
+    // Prefer our validated WoW64 route when the local Windows ABI is recognized.
+    Log("startup_direct_protection_ready",MemoryProtection::PrepareForGame());
     if(skipKnownDeviceQueries && !InputClassifier::original) {
     bool installed=InputClassifier::InstallForGame();
     Log(installed?"known_keyboard_mouse_classifier_installed":"known_keyboard_mouse_classifier_guard_rejected",InputClassifier::lastGuardError);
     Log("classifier_guard_duration_ms",static_cast<unsigned>(GetTickCount64()-before));
-    Log("classifier_rsmods_guard_stage",InputClassifier::lastRsmodsGuard);
     Log("classifier_hash_error",InputClassifier::lastHashError);
     Log("classifier_hook_failure_stage",InputClassifier::lastHookError);
     Log("classifier_hook_windows_error",InputClassifier::lastHookWindowsError);
     Log("classifier_protection_status",static_cast<unsigned>(InputClassifier::lastProtectionStatus));
     Log("classifier_protection_restore_error",InputClassifier::lastRestoreError);
     }
-    if(autoLastProfile && !ProfileBoot::installed) {
-        bool profileInstalled=ProfileBoot::InstallForGame(startupConfig,Log);
-        Log(profileInstalled?"profile_boot_adapter_installed":"profile_boot_adapter_guard_rejected",ProfileBoot::error);
-    }
     if(skipIntro && !IntroSkip::installed) {
-        bool introInstalled=IntroSkip::InstallForGame(Log);
+        bool retryReady=TitleRetry::Install(Log);
+        Log(retryReady?"title_movie_retry_available":"title_movie_retry_guard_rejected",TitleRetry::error);
+        bool introInstalled=retryReady && IntroSkip::InstallForGame(Log);
         Log(introInstalled?"native_intro_adapter_installed":"native_intro_adapter_guard_rejected",IntroSkip::error);
     }
+    Log("startup_native_protection_calls",MemoryProtection::nativeCalls);
+    Log("startup_direct_protection_calls",MemoryProtection::directCalls);
+    Log("startup_direct_protection_guard",NativeProtection::error);
+    Log("startup_native_protection_status",static_cast<unsigned>(MemoryProtection::nativeStatus));
+    Log("startup_protection_windows_error",MemoryProtection::windowsError);
 }
 
 template<class Interface, class Device, class Instance, class Callback, class Char,
@@ -189,7 +190,7 @@ extern "C" HRESULT WINAPI ProxyCreate(HINSTANCE instance,DWORD version,REFIID ii
     if(!fn) return HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND);
     HRESULT hr=fn(instance,version,iid,out,outer);
     if(skipKnownDeviceQueries)Log("directinput_create_returned",hr);
-    if(FAILED(hr) || !out || !*out || (!skipGamepads && !autoLastProfile && !skipIntro) || outer) return hr;
+    if(FAILED(hr) || !out || !*out || (!skipGamepads && !skipIntro) || outer) return hr;
     TryFeatures();
     void* wrapper=nullptr;
     if(iid==IID_IDirectInput8A) wrapper=new(std::nothrow) InputA(static_cast<IDirectInput8A*>(*out),iid);

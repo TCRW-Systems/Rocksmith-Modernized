@@ -3,18 +3,56 @@
 #define CHECK(x) do {if(!(x)){printf("FAIL line %d: %s\n",__LINE__,#x);return 1;}}while(0)
 static float state=0;
 static unsigned movie=0,name=0;
+static unsigned controller[32]={};
+static float rate=0.85f;
+static unsigned writes=0;
+static void* expectedMovie=reinterpret_cast<void*>(0x12345678);
+static unsigned __cdecl MockRead(void* object,IntroSkip::PropertyName* property) {
+    if(object!=expectedMovie || strcmp(property->data,"mScene.introTimeline.timeScale") ||
+       property->end!=property->data+strlen(property->data))return 0;
+    unsigned bits;memcpy(&bits,&rate,4);return bits;
+}
+static __declspec(naked) void PropertyGetter() {
+    __asm {push ecx
+        push eax
+        call MockRead
+        add esp,8
+        push eax
+        fld dword ptr [esp]
+        add esp,4
+        ret}
+}
+static unsigned __cdecl MockWrite(void* object,IntroSkip::PropertyName* property,float* value) {
+    if(object!=expectedMovie || strcmp(property->data,"mScene.introTimeline.timeScale") || *value!=100.0f)return 0;
+    rate=*value;++writes;return 1;
+}
+static __declspec(naked) void Setter() {
+    __asm {push dword ptr [esp+4]
+        push ecx
+        push eax
+        call MockWrite
+        add esp,12
+        ret 4}
+}
 static __declspec(naked) void Getter() {
-    __asm {mov dword ptr [movie],eax
+    __asm {cmp ecx,087654321h
+        jne property
+        mov dword ptr [movie],eax
         mov dword ptr [name],ecx
         fld dword ptr [state]
-        ret}
+        ret
+    property:
+        jmp PropertyGetter}
 }
 static float Invoke(void* function) {
     float result;
-    __asm {mov eax,012345678h
+    __asm {push ebx
+        lea ebx,controller
+        mov eax,012345678h
         mov ecx,087654321h
         call dword ptr [function]
-        fstp dword ptr [result]}
+        fstp dword ptr [result]
+        pop ebx}
     return result;
 }
 int main() {
@@ -28,15 +66,20 @@ int main() {
     CHECK(!IntroSkip::InstallAt(site,reinterpret_cast<void*>(&Invoke)));
     CHECK(IntroSkip::InstallAt(site,reinterpret_cast<void*>(&Getter)));
     CHECK(site[0]==0xe8);
+    IntroSkip::setter=reinterpret_cast<void*>(&Setter);
+    controller[0x34/4]=0xbf800000u; // Asset callbacks have not selected a screen.
+    for(int i=-1;i<=5;++i) {state=static_cast<float>(i);CHECK(Invoke(call)==state);}
+    CHECK(writes==0 && IntroSkip::attempts==0);
+    controller[0x34/4]=0;state=0;CHECK(Invoke(call)==0);CHECK(writes==0);
+    state=1.5f;CHECK(Invoke(call)==state);CHECK(writes==0);
+    state=1;CHECK(Invoke(call)==1);CHECK(writes==1 && rate==100.0f);
     for(int i=-1;i<=5;++i) {
-        state=static_cast<float>(i);float actual=Invoke(call);
-        CHECK(actual==((i>=1 && i<=3)?4.0f:state));
+        state=static_cast<float>(i);CHECK(Invoke(call)==state);
         CHECK(movie==0x12345678 && name==0x87654321);
     }
-    state=1.5f;CHECK(Invoke(call)==state); // Unexpected values do not force completion.
-    CHECK(IntroSkip::completions==3);
+    CHECK(writes==1 && IntroSkip::completions==1);
     MEMORY_BASIC_INFORMATION mem{};CHECK(VirtualQuery(call,&mem,sizeof(mem)));CHECK(mem.Protect==PAGE_EXECUTE_READ);
     CHECK(!IntroSkip::InstallAt(site,reinterpret_cast<void*>(&Getter)));
-    puts("PASS: intro-only CALL redirection, EAX/ECX inputs, x87 return, unready/unknown fallback, completion mapping, target/duplicate guards and protection restoration");
+    puts("PASS: intro CALL ABI, original playback preservation, asset gate, timeline setter ABI and single acceleration, target guards and RX restoration");
     return 0;
 }

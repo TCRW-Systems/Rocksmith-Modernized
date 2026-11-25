@@ -16,7 +16,7 @@ int main(int argc,char** argv) {
     wchar_t* slash=wcsrchr(config,L'\\');CHECK(slash);wcscpy_s(slash+1,MAX_PATH-(slash+1-config),L"RSStartup.ini");
     HANDLE ini=CreateFileW(config,GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);CHECK(ini!=INVALID_HANDLE_VALUE);
     struct Cleanup {const wchar_t* path;~Cleanup(){DeleteFileW(path);}} cleanup{config};
-    const char* settings=early?"[Startup]\r\nStartupHighQoS=1\r\n":passthrough?"[Startup]\r\nSkipGamepadEnumeration=0\r\nAutoLoadLastProfile=1\r\n":"[Startup]\r\nSkipGamepadEnumeration=1\r\n";
+    const char* settings=early?"[Startup]\r\nStartupHighQoS=1\r\n":passthrough?"[Startup]\r\nSkipGamepadEnumeration=0\r\n":"[Startup]\r\nSkipGamepadEnumeration=1\r\n";
     DWORD written=0;CHECK(WriteFile(ini,settings,static_cast<DWORD>(strlen(settings)),&written,nullptr));CloseHandle(ini);
     struct Power {ULONG version,control,state;};Power before{1,0,0},after{1,0,0};
     using ReadInfo=BOOL(WINAPI*)(HANDLE,int,void*,DWORD);
@@ -40,7 +40,10 @@ int main(int argc,char** argv) {
         auto u=static_cast<IUnknown*>(p);
         IUnknown* identity=nullptr;
         CHECK(SUCCEEDED(u->QueryInterface(IID_IUnknown,(void**)&identity)));
-        CHECK(identity==u); identity->Release();
+        if(!passthrough)CHECK(identity==u);
+        IUnknown* canonical=nullptr;
+        CHECK(SUCCEEDED(identity->QueryInterface(IID_IUnknown,(void**)&canonical)));
+        CHECK(canonical==identity);canonical->Release();identity->Release();
         int count=0;
         if(passthrough) {
             void* baseline=nullptr;
@@ -77,6 +80,6 @@ int main(int argc,char** argv) {
         }
         CHECK(u->Release()==0);
     }
-    puts(passthrough?"PASS: profile-only configuration preserves ANSI/Unicode gamepad and all-device enumeration":"PASS: ANSI/Unicode interfaces, COM identity/refcounts, gamepad filter, keyboard enumeration, keyboard/mouse creation");
+    puts(passthrough?"PASS: passthrough preserves ANSI/Unicode gamepad and all-device enumeration":"PASS: ANSI/Unicode interfaces, COM identity/refcounts, gamepad filter, keyboard enumeration, keyboard/mouse creation");
     return 0;
 }

@@ -27,10 +27,10 @@ def main():
     ini = configparser.ConfigParser(interpolation=None)
     ini.read_string(config.decode('utf-8-sig'))
     keys = {'SkipGamepadEnumeration', 'SkipKnownKeyboardMouseXInputChecks',
-            'AutoLoadLastProfile', 'SkipIntro', 'StartupHighQoS'}
+            'SkipIntro', 'StartupHighQoS'}
     expected = {key.lower() for key in keys}
     if ini.defaults() or ini.sections() != ['Startup'] or set(ini['Startup']) != expected:
-        raise SystemExit('Config must contain only the five portable Startup options')
+        raise SystemExit('Config must contain only the four portable Startup options')
     if any(value not in ('0', '1') for value in ini['Startup'].values()):
         raise SystemExit('Startup options must be 0 or 1')
     files = {'dinput8.dll': dll, 'RSStartup.ini': config}
